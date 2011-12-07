@@ -19,29 +19,24 @@ stdout, stderr = [getwriter('utf8')(x) for x in stdout, stderr]
 Match = namedtuple('Match', ['filename', 'matches'])
 
 
-extre = compile(r'\.(mp3|ogg|flac|m4a)$', IGNORECASE)
+fhandler = {
+	'mp3' : EasyID3,
+	'ogg' : OggVorbis,
+	'flac' : FLAC,
+	'm4a' : EasyMP4
+}
+extre = compile(r'\.(%s)$' % '|'.join(fhandler.iterkeys()), IGNORECASE)
 def get_tags(fname):
 	m = extre.search(fname)
 	if m is None:
 		raise ValueError('Unknown file type.')
 	ext = m.group(1).lower()
 	tags = {}
-	if ext == 'mp3':
-		try:
-			info = EasyID3(fname)
-			tags = list(info.iteritems())
-		except ID3NoHeaderError:
-			raise ValueError('No ID3 tags.')
-	elif ext == 'ogg':
-		info = OggVorbis(fname)
-		tags = list(info.iteritems())
-	elif ext == 'flac':
-		info = FLAC(fname)
-		tags = list(info.iteritems())
-	elif ext == 'm4a':
-		info = EasyMP4(fname)
-		tags = list(info.iteritems())
-	return tags
+	try:
+		info = fhandler[ext](fname)
+		return list(info.iteritems())
+	except ID3NoHeaderError:
+		raise ValueError(u'No ID3 tags: %s' % fname)
 
 def find(infiles, string):
 	sre = compile(string, IGNORECASE)
