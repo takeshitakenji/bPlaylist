@@ -70,14 +70,12 @@ def fwalk(*dirs):
 					if isfile(f):
 						yield unicode(f)
 if __name__ == '__main__':
-	try:
-		string, dirs = argv[1], argv[2:]
-		if not dirs:
-			raise ValueError
-	except (ValueError, IndexError):
-		print >>stderr, u'Usage: %s expr dir1 [ .. dirN ]' % argv[0]
-		exit(1)
-	for match in find(fwalk(*dirs), string):
+	from argparse import ArgumentParser
+	parser = ArgumentParser(description = 'Find tracks')
+	parser.add_argument('expr', help = 'Regular expression to match tags', action = 'store')
+	parser.add_argument('directories', metavar = 'dir', help = 'Directories to search', action = 'store', nargs = '+')
+	args = parser.parse_args(argv[1:])
+	for match in find(fwalk(*args.directories), args.expr):
 		print >>stdout, match.filename
 		for key, values in match.matches.iteritems():
 			indent = ' ' * (len(key) + 2)
