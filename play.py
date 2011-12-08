@@ -77,30 +77,34 @@ class Playlist(object):
 			self.__tracks.append(track)
 
 Track = namedtuple('Track', ['fname', 'tags'])
-
-if __name__ == '__main__':
-	from argparse import ArgumentParser
-	from random import choice
-	parser = ArgumentParser(description = 'Generate a playlist')
-	parser.add_argument('playlist', help = 'Playlist to generate', action = 'store')
-	parser.add_argument('directories', metavar = 'dir', help = 'Directories to search', action = 'store', nargs = '+')
-	parser.add_argument('-n', '--count', dest = 'count', type = int, help = 'Maximum number of tracks in generated playlist.', default = 0)
-	args = parser.parse_args(argv[1:])
-
-	intracks = []
-	for t in fwalk(*args.directories):
+def get_track_tags(files):
+	for t in files:
 		try:
 			tags = tuple([(key, tuple(value)) for key, value in get_tags(t)])
 		except ValueError:
 			continue
-		intracks.append(Track(t, tags))
-
+		yield Track(t, tags)
+def build_track_table(intracks):
 	tracks = defaultdict(list)
 
 	ntracks = len(intracks)
 	for t in intracks:
 		tracks[hash(t.tags) % ntracks].append(t.fname)
+	return tracks
+
+if __name__ == '__main__':
+	from argparse import ArgumentParser
+	from random import choice
+	parser = ArgumentParser(description = 'Generate a playlist')
+	parser.add_argument('playlist', help = 'Playlist to generate (- for stdout)', action = 'store')
+	parser.add_argument('directories', metavar = 'dir', help = 'Directories to search', action = 'store', nargs = '+')
+	parser.add_argument('-n', '--count', dest = 'count', type = int, help = 'Maximum number of tracks in generated playlist.', default = 0)
+	args = parser.parse_args(argv[1:])
+
+	intracks = list(get_track_tags(fwalk(*args.directories)))
+	tracks = build_track_table(intracks)
 	
+	ntracks = len(tracks)
 	track0 = choice(intracks).fname
 	del intracks
 	pls = Playlist(track0, ntracks)
@@ -123,6 +127,10 @@ if __name__ == '__main__':
 	except (KeyboardInterrupt, StopIteration):
 		pass
 	print >>stderr, 'Writing playlist file.'
-	with closing(codecs_open(args.playlist, 'w', 'utf8')) as f:
+	if args.playlist == '-':
 		for t in pls.tracks:
-			print >>f, t
+			print >>stdout, t
+	else:
+		with closing(codecs_open(args.playlist, 'w', 'utf8')) as f:
+			for t in pls.tracks:
+				print >>f, t
