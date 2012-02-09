@@ -252,7 +252,7 @@ class trPlaylist(Playlist):
 			if not len(playlist):
 				playlist.append(f)
 		
-		for i in xrange(maxcount):
+		for i in xrange(maxcount - 1):
 			with open(playlist[-1], 'rb') as f:
 				while True:
 					key = hash(f.read(2048))
